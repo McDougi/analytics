@@ -23,7 +23,7 @@ st.caption("Živá tvrdá data: Fed Likvidita, TGA, Bondy, Měny & CoT Sentiment
 # --- 2. GESTIKULACE ZÍSKÁNÍ API KLÍČE (SECRETS NEBO SIDEBAR) ---
 # V nastavení Streamlit Cloudu si uložíš FRED_API_KEY do Secrets
 if "FRED_API_KEY" in st.secrets:
-    FRED_API_KEY = st.secrets["e7613898aef94fc1957947a90824f36c"]
+    FRED_API_KEY = st.secrets["FRED_API_KEY"]
 else:
     FRED_API_KEY = st.sidebar.text_input("Vlož FRED API Klíč:", type="password")
 
