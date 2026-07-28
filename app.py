@@ -17,8 +17,8 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📈 Fundamental Market Dashboard")
-st.caption("Živá tvrdá data: Fed Likvidita, TGA, Bondy, Měny & CoT Sentiment")
+st.title("📈 Fundamental Market Data")
+st.caption("Tvrdá data: Fed Likvidita, TGA, Bondy, Měny & CoT Sentiment")
 
 # --- 2. GESTIKULACE ZÍSKÁNÍ API KLÍČE (SECRETS NEBO SIDEBAR) ---
 # V nastavení Streamlit Cloudu si uložíš FRED_API_KEY do Secrets
