@@ -33,7 +33,7 @@ if not FRED_API_KEY:
 
 # ✅ Správné načtení klienta z bezpečně uloženého klíče
 FRED_API_KEY = st.secrets["FRED_API_KEY"]
-fred = Fred(api_key=FRED_API_KEY))
+fred = Fred(api_key=FRED_API_KEY)
 
 # --- 3. POMOCNÉ FUNKCE A SBĚR DAT ---
 six_years_ago_str = (datetime.now() - timedelta(days=365*6)).strftime('%Y-%m-%d')
