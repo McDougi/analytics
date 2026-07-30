@@ -121,41 +121,93 @@ st.subheader("🌍 Forex: Časová Matice Měn (Monetární Politika, Inflace & 
 
 currency_data = [
     {
-        "Měna": "🇺🇸 USD", "Základní sazba": "3.63%", "Sazba výhled": "3.50% (-25 bps cut)", 
-        "CPI (Aktuální)": "2.40%", "Inflační očekávání": f"1Y: {raw_data['mich_1y']:.2f}% | 5Y: {raw_data['be_5y']:.2f}%",
-        "10Y Výnos": f"{raw_data['us10y_c']:.2f}%", "CoT Position (Fondy)": "NET LONG (+35k)"
+        "Měna": "🇺🇸 USD", 
+        "Základní sazba": "3.63%", 
+        "Sazba výhled": "3.50% (-25 bps cut)", 
+        "CPI (Aktuální)": "2.40%", 
+        "Inflační očekávání": f"1Y: {raw_data['mich_1y']:.2f}% | 5Y: {raw_data['be_5y']:.2f}%",
+        "10Y Výnos": f"{raw_data['us10y_c']:.2f}%", 
+        "CoT Pozice": 35000, 
+        "CoT Δ WoW": 5000,
+        "CoT Sentiment": "NET LONG"
     },
     {
-        "Měna": "🇪🇺 EUR", "Základní sazba": "2.25%", "Sazba výhled": "2.25% (Pauza)", 
-        "CPI (Aktuální)": "2.00%", "Inflační očekávání": "1Y: 2.10% | 5Y: 1.95%",
-        "10Y Výnos": "2.35% (Bund)", "CoT Position (Fondy)": "NET SHORT (-12k)"
+        "Měna": "🇪🇺 EUR", 
+        "Základní sazba": "2.25%", 
+        "Sazba výhled": "2.25% (Pauza)", 
+        "CPI (Aktuální)": "2.00%", 
+        "Inflační očekávání": "1Y: 2.10% | 5Y: 1.95%",
+        "10Y Výnos": "2.35% (Bund)", 
+        "CoT Pozice": -12000, 
+        "CoT Δ WoW": -8000,
+        "CoT Sentiment": "NET SHORT"
     },
     {
-        "Měna": "🇬🇧 GBP", "Základní sazba": "4.25%", "Sazba výhled": "4.00% (Možný cut)", 
-        "CPI (Aktuální)": "2.60%", "Inflační očekávání": "1Y: 2.40% | 5Y: 2.10%",
-        "10Y Výnos": "4.15% (Gilt)", "CoT Position (Fondy)": "NET LONG (+18k)"
+        "Měna": "🇬🇧 GBP", 
+        "Základní sazba": "4.25%", 
+        "Sazba výhled": "4.00% (Možný cut)", 
+        "CPI (Aktuální)": "2.60%", 
+        "Inflační očekávání": "1Y: 2.40% | 5Y: 2.10%",
+        "10Y Výnos": "4.15% (Gilt)", 
+        "CoT Pozice": 18000, 
+        "CoT Δ WoW": 2000,
+        "CoT Sentiment": "NET LONG"
     },
     {
-        "Měna": "🇦🇺 AUD", "Základní sazba": "4.35%", "Sazba výhled": "4.35% (Beze změny)", 
-        "CPI (Aktuální)": "3.10%", "Inflační očekávání": "1Y: 2.80% | 5Y: 2.40%",
-        "10Y Výnos": "4.20%", "CoT Position (Fondy)": "EXTREME SHORT (-45k)"
+        "Měna": "🇦🇺 AUD", 
+        "Základní sazba": "4.35%", 
+        "Sazba výhled": "4.35% (Beze změny)", 
+        "CPI (Aktuální)": "3.10%", 
+        "Inflační očekávání": "1Y: 2.80% | 5Y: 2.40%",
+        "10Y Výnos": "4.20%", 
+        "CoT Pozice": -45000, 
+        "CoT Δ WoW": 11000,  # +11k signalizuje pokrývání shortů (Squeeze warning!)
+        "CoT Sentiment": "EXTREME SHORT"
     },
     {
-        "Měna": "🇯🇵 JAP", "Základní sazba": "1.00%", "Sazba výhled": "1.00% - 1.25% (Hike možný)", 
-        "CPI (Aktuální)": "2.80%", "Inflační očekávání": "1Y: 2.50% | 5Y: 2.00%",
-        "10Y Výnos": "1.10% (JGB)", "CoT Position (Fondy)": "NET SHORT (-28k)"
+        "Měna": "🇯🇵 JAP", 
+        "Základní sazba": "1.00%", 
+        "Sazba výhled": "1.00% - 1.25% (Hike možný)", 
+        "CPI (Aktuální)": "2.80%", 
+        "Inflační očekávání": "1Y: 2.50% | 5Y: 2.00%",
+        "10Y Výnos": "1.10% (JGB)", 
+        "CoT Pozice": -28000, 
+        "CoT Δ WoW": -3000,
+        "CoT Sentiment": "NET SHORT"
     },
     {
-        "Měna": "🇨🇭 CHF", "Základní sazba": "0.00%", "Sazba výhled": "0.00% (Držení na nule)", 
-        "CPI (Aktuální)": "1.10%", "Inflační očekávání": "1Y: 1.00% | 5Y: 1.10%",
-        "10Y Výnos": "0.45%", "CoT Position (Fondy)": "NET SHORT (-15k)"
+        "Měna": "🇨🇭 CHF", 
+        "Základní sazba": "0.00%", 
+        "Sazba výhled": "0.00% (Držení na nule)", 
+        "CPI (Aktuální)": "1.10%", 
+        "Inflační očekávání": "1Y: 1.00% | 5Y: 1.10%",
+        "10Y Výnos": "0.45%", 
+        "CoT Pozice": -15000, 
+        "CoT Δ WoW": -1000,
+        "CoT Sentiment": "NET SHORT"
     },
 ]
 
 df_forex = pd.DataFrame(currency_data)
-st.dataframe(df_forex, use_container_width=True, hide_index=True)
 
-st.markdown("---")
+# Zobrazení tabulky s formátováním čísel pro CoT
+st.dataframe(
+    df_forex, 
+    use_container_width=True, 
+    hide_index=True,
+    column_config={
+        "CoT Pozice": st.column_config.NumberColumn(
+            "CoT Čistá pozice",
+            help="Celková čistá pozice velkých spekulantů (Net Long/Short)",
+            format="%d"
+        ),
+        "CoT Δ WoW": st.column_config.NumberColumn(
+            "CoT Změna (WoW)",
+            help="Týdenní změna v počtu kontraktů oproti minulému reportu",
+            format="%+d"
+        )
+    }
+)
 
 # --- 6. GRAF ČISTÉ LIKVIDITY (6 LET) ---
 st.subheader("🌊 Měsíční Vývoj Čisté Likvidity Fedu (Posledních 6 let)")
@@ -176,7 +228,7 @@ if st.button("🚀 Vygenerovat komplet podklady pro Chat"):
     payload += "================================================================================\n"
     payload += "DATOVÉ KARTY MĚN (FOREX):\n"
     for row in currency_data:
-        payload += f"• {row['Měna']}: Sazba {row['Základní sazba']} | CPI {row['CPI (Aktuální)']} | 10Y Yield {row['10Y Výnos']} | CoT: {row['CoT Position (Fondy)']}\n"
+        payload += f"• {row['Měna']}: Sazba {row['Základní sazba']} | CPI {row['CPI (Aktuální)']} | 10Y Yield {row['10Y Výnos']} | CoT: {row['CoT Sentiment']} ({row['CoT Pozice']:,} | WoW: {row['CoT Δ WoW']:+,})\n"
     payload += "================================================================================\n"
     payload += f"US INDEXY & LIKVIDITA:\n"
     payload += f"• S&P 500: {raw_data['sp500_c']:.2f} | Nasdaq 100: {raw_data['nasdaq_c']:.2f} | VIX: {raw_data['vix_c']:.2f} | US10Y: {raw_data['us10y_c']:.2f}%\n"
@@ -186,3 +238,4 @@ if st.button("🚀 Vygenerovat komplet podklady pro Chat"):
     
     st.code(payload, language="text")
     st.success("Kód výše zkopíruj a vlož sem do našeho chatu ke kompletní analýze!")
+    
