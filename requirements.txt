@@ -1,7 +1,112 @@
-streamlit
-fredapi
-yfinance
-pandas
-numpy
-matplotlib
-pip install cot_reports
+import streamlit as st
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
+from fredapi import Fred
+from datetime import datetime, timedelta
+import cot_reports as cot  # <-- Knihovna pro automatické stahování CoT
+
+# --- 3. DATAFETCHING & CACHING S AUTOMATICKÝM COT ---
+six_years_ago_str = (datetime.now() - timedelta(days=365*6)).strftime('%Y-%m-%d')
+current_year = datetime.now().year
+
+@st.cache_data(ttl=43200) # Caching na 12 hodin (CoT vychází 1x týdně v pátek)
+def fetch_all_data():
+    def get_fred(series_id):
+        try:
+            data = fred.get_series(series_id, observation_start=six_years_ago_str).dropna()
+            return data.iloc[-1], data
+        except Exception:
+            return None, None
+
+    # FRED data
+    fed_assets, fed_assets_hist = get_fred('WALCL')        
+    tga_balance, tga_hist = get_fred('WTREGEN')          
+    rrp_balance, rrp_hist = get_fred('RRPONTSYD')         
+    m2_supply, _ = get_fred('WM2NS')                     
+    mich_1y, _ = get_fred('MICH')                        
+    be_5y, _ = get_fred('T5YIE')                         
+
+    # Yahoo Finance trhy
+    try:
+        market_tickers = ['^GSPC', '^IXIC', '^VIX', '^TNX', '^IRX']
+        yf_data = yf.download(market_tickers, period='1mo', interval='1d', progress=False)['Close']
+        sp500_c = yf_data['^GSPC'].dropna().iloc[-1]
+        sp500_2w = yf_data['^GSPC'].dropna().iloc[-10] if len(yf_data['^GSPC'].dropna()) >= 10 else sp500_c
+        nasdaq_c = yf_data['^IXIC'].dropna().iloc[-1]
+        nasdaq_2w = yf_data['^IXIC'].dropna().iloc[-10] if len(yf_data['^IXIC'].dropna()) >= 10 else nasdaq_c
+        vix_c = yf_data['^VIX'].dropna().iloc[-1]
+        vix_2w = yf_data['^VIX'].dropna().iloc[-10] if len(yf_data['^VIX'].dropna()) >= 10 else vix_c
+        us10y_c = yf_data['^TNX'].dropna().iloc[-1]
+        us10y_2w = yf_data['^TNX'].dropna().iloc[-10] if len(yf_data['^TNX'].dropna()) >= 10 else us10y_c
+        us2y_c = yf_data['^IRX'].dropna().iloc[-1]
+    except Exception:
+        sp500_c, sp500_2w = 7408.30, 7575.39
+        nasdaq_c, nasdaq_2w = 25137.69, 26281.61
+        vix_c, vix_2w = 18.81, 17.16
+        us10y_c, us10y_2w = 4.70, 4.57
+        us2y_c = 3.80
+
+    # --- AUTOMATICKÉ STAŽENÍ COT REPORTU ---
+    cot_dict = {}
+    try:
+        # Stáhneme "Traders in Financial Futures" (fut) za aktuální rok
+        df_cot = cot.cot_year(year=current_year, cot_report_type='traders_in_financial_futures_fut')
+        
+        # Ošetření názvů sloupců (CFTC mění mezery/velká písmena, sjednotíme na lowercase bez mezer)
+        df_cot.columns = [c.strip().lower().replace(' ', '_') for c in df_cot.columns]
+        
+        # Definice klíčových slov pro jednotlivé měny v CFTC tabulce
+        currency_keywords = {
+            "USD": "us dollar",
+            "EUR": "euro fx",
+            "GBP": "british pound",
+            "AUD": "australian dollar",
+            "JPY": "japanese yen",
+            "CHF": "swiss franc"
+        }
+        
+        for cur, keyword in currency_keywords.items():
+            # Filtrování řádku podle názvu trhu
+            market_row = df_cot[df_cot['market_and_exchange_names'].str.contains(keyword, case=False, na=False)]
+            if not market_row.empty:
+                # Vezmeme nejnovější datum (poslední řádek)
+                latest = market_row.iloc[-1]
+                prev = market_row.iloc[-2] if len(market_row) > 1 else latest
+                
+                # Výpočet čisté pozice (např. Asset Manager Long minus Short, nebo Noncommercial)
+                # U finančních futures se často používá Asset Manager nebo Leveraged Funds. Zde bereme Asset Manager Net.
+                long_col = [c for c in df_cot.columns if 'asset_mgr_positions_long' in c]
+                short_col = [c for c in df_cot.columns if 'asset_mgr_positions_short' in c]
+                
+                if long_col and short_col:
+                    net_pos = int(latest[long_col[0]] - latest[short_col[0]])
+                    prev_net = int(prev[long_col[0]] - prev[short_col[0]])
+                    delta_wow = net_pos - prev_net
+                else:
+                    net_pos, delta_wow = 0, 0
+                
+                sentiment = "NET LONG" if net_pos > 0 else ("NET SHORT" if net_pos < 0 else "NEUTRAL")
+                
+                cot_dict[cur] = {
+                    "position": net_pos,
+                    "delta": delta_wow,
+                    "sentiment": sentiment
+                }
+    except Exception as e:
+        # Fallback pokud stahování selže (např. výpadek CFTC serveru)
+        print(f"Chyba při stahování CoT: {e}")
+        pass
+
+    return {
+        'fed_assets': fed_assets, 'fed_assets_hist': fed_assets_hist,
+        'tga_balance': tga_balance, 'tga_hist': tga_hist,
+        'rrp_balance': rrp_balance, 'rrp_hist': rrp_hist,
+        'm2_supply': m2_supply, 'mich_1y': mich_1y, 'be_5y': be_5y,
+        'sp500_c': sp500_c, 'sp500_2w': sp500_2w,
+        'nasdaq_c': nasdaq_c, 'nasdaq_2w': nasdaq_2w,
+        'vix_c': vix_c, 'vix_2w': vix_2w,
+        'us10y_c': us10y_c, 'us10y_2w': us10y_2w, 'us2y_c': us2y_c,
+        'cot_data': cot_dict
+    }
