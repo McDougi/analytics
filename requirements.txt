@@ -4,3 +4,4 @@ yfinance
 pandas
 numpy
 matplotlib
+pip install cot_reports
