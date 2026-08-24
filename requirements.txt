@@ -5,3 +5,4 @@ yfinance
 matplotlib
 fredapi
 requests
+cot_reports
