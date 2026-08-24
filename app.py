@@ -1,3 +1,7 @@
+# ==============================================================================
+# 🚀 STREAMLIT DASHBOARD: FOREX & US INDEXES FULL FUNDAMENTAL ENGINE
+# ==============================================================================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -5,13 +9,36 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 from fredapi import Fred
 from datetime import datetime, timedelta
-import cot_reports as cot  # <-- Knihovna pro automatické stahování CoT
+import cot_reports as cot  # <-- Automatické stahování CoT reportů
+
+# --- 1. KONFIGURACE STRÁNEK ---
+st.set_page_config(
+    page_title="Forex & US Indexy | Fundamentální Dashboard",
+    page_icon="📈",
+    layout="wide"
+)
+
+st.title("📈 Fundamental Market Dashboard (Forex & US Indexy)")
+st.caption("Živá tvrdá data: Fed Likvidita, TGA, Bondy, Časová matice měn & Automatické CoT Sentiment")
+
+# --- 2. BEZPEČNÉ NAČTENÍ API KLÍČE SE SECRETS ---
+if "FRED_API_KEY" in st.secrets:
+    FRED_API_KEY = st.secrets["FRED_API_KEY"]
+else:
+    FRED_API_KEY = st.sidebar.text_input("Vlož FRED API Klíč:", type="password")
+
+if not FRED_API_KEY:
+    st.warning("⚠️ Pro načtení dat vlož FRED API Klíč v postranním panelu nebo nastavení Secrets na Streamlitu.")
+    st.stop()
+
+# Inicializace klienta FRED
+fred = Fred(api_key=FRED_API_KEY)
 
 # --- 3. DATAFETCHING & CACHING S AUTOMATICKÝM COT ---
 six_years_ago_str = (datetime.now() - timedelta(days=365*6)).strftime('%Y-%m-%d')
 current_year = datetime.now().year
 
-@st.cache_data(ttl=43200) # Caching na 12 hodin (CoT vychází 1x týdně v pátek)
+@st.cache_data(ttl=43200) # Caching na 12 hodin
 def fetch_all_data():
     def get_fred(series_id):
         try:
@@ -20,7 +47,6 @@ def fetch_all_data():
         except Exception:
             return None, None
 
-    # FRED data
     fed_assets, fed_assets_hist = get_fred('WALCL')        
     tga_balance, tga_hist = get_fred('WTREGEN')          
     rrp_balance, rrp_hist = get_fred('RRPONTSYD')         
@@ -28,7 +54,6 @@ def fetch_all_data():
     mich_1y, _ = get_fred('MICH')                        
     be_5y, _ = get_fred('T5YIE')                         
 
-    # Yahoo Finance trhy
     try:
         market_tickers = ['^GSPC', '^IXIC', '^VIX', '^TNX', '^IRX']
         yf_data = yf.download(market_tickers, period='1mo', interval='1d', progress=False)['Close']
@@ -51,13 +76,9 @@ def fetch_all_data():
     # --- AUTOMATICKÉ STAŽENÍ COT REPORTU ---
     cot_dict = {}
     try:
-        # Stáhneme "Traders in Financial Futures" (fut) za aktuální rok
         df_cot = cot.cot_year(year=current_year, cot_report_type='traders_in_financial_futures_fut')
-        
-        # Ošetření názvů sloupců (CFTC mění mezery/velká písmena, sjednotíme na lowercase bez mezer)
         df_cot.columns = [c.strip().lower().replace(' ', '_') for c in df_cot.columns]
         
-        # Definice klíčových slov pro jednotlivé měny v CFTC tabulce
         currency_keywords = {
             "USD": "us dollar",
             "EUR": "euro fx",
@@ -68,15 +89,11 @@ def fetch_all_data():
         }
         
         for cur, keyword in currency_keywords.items():
-            # Filtrování řádku podle názvu trhu
             market_row = df_cot[df_cot['market_and_exchange_names'].str.contains(keyword, case=False, na=False)]
             if not market_row.empty:
-                # Vezmeme nejnovější datum (poslední řádek)
                 latest = market_row.iloc[-1]
                 prev = market_row.iloc[-2] if len(market_row) > 1 else latest
                 
-                # Výpočet čisté pozice (např. Asset Manager Long minus Short, nebo Noncommercial)
-                # U finančních futures se často používá Asset Manager nebo Leveraged Funds. Zde bereme Asset Manager Net.
                 long_col = [c for c in df_cot.columns if 'asset_mgr_positions_long' in c]
                 short_col = [c for c in df_cot.columns if 'asset_mgr_positions_short' in c]
                 
@@ -94,9 +111,7 @@ def fetch_all_data():
                     "delta": delta_wow,
                     "sentiment": sentiment
                 }
-    except Exception as e:
-        # Fallback pokud stahování selže (např. výpadek CFTC serveru)
-        print(f"Chyba při stahování CoT: {e}")
+    except Exception:
         pass
 
     return {
@@ -111,6 +126,8 @@ def fetch_all_data():
         'cot_data': cot_dict
     }
 
+raw_data = fetch_all_data()
+cot_live = raw_data.get('cot_data', {})
 
 # Přepočty
 fed_assets_b = raw_data['fed_assets'] / 1000 if raw_data['fed_assets'] else 6747.38
@@ -143,7 +160,7 @@ col4.metric("US 10Y Výnos", f"{raw_data['us10y_c']:.2f}%", delta=f"{raw_data['u
 
 st.markdown("---")
 
-# --- 5. FOREX DATA: ČASOVÁ MATICE MĚN & COT ---
+# --- 5. FOREX DATA: ČASOVÁ MATICE MĚN & AUTOMATICKÉ COT ---
 st.subheader("🌍 Forex: Časová Matice Měn (Monetární Politika, Inflace & CoT)")
 
 currency_data = [
@@ -154,9 +171,9 @@ currency_data = [
         "CPI (Aktuální)": "2.40%", 
         "Inflační očekávání": f"1Y: {raw_data['mich_1y']:.2f}% | 5Y: {raw_data['be_5y']:.2f}%",
         "10Y Výnos": f"{raw_data['us10y_c']:.2f}%", 
-        "CoT Pozice": 35000, 
-        "CoT Δ WoW": 5000,
-        "CoT Sentiment": "NET LONG"
+        "CoT Pozice": cot_live.get('USD', {}).get('position', 35000), 
+        "CoT Δ WoW": cot_live.get('USD', {}).get('delta', 5000),
+        "CoT Sentiment": cot_live.get('USD', {}).get('sentiment', 'NET LONG')
     },
     {
         "Měna": "🇪🇺 EUR", 
@@ -165,9 +182,9 @@ currency_data = [
         "CPI (Aktuální)": "2.00%", 
         "Inflační očekávání": "1Y: 2.10% | 5Y: 1.95%",
         "10Y Výnos": "2.35% (Bund)", 
-        "CoT Pozice": -12000, 
-        "CoT Δ WoW": -8000,
-        "CoT Sentiment": "NET SHORT"
+        "CoT Pozice": cot_live.get('EUR', {}).get('position', -12000), 
+        "CoT Δ WoW": cot_live.get('EUR', {}).get('delta', -8000),
+        "CoT Sentiment": cot_live.get('EUR', {}).get('sentiment', 'NET SHORT')
     },
     {
         "Měna": "🇬🇧 GBP", 
@@ -176,9 +193,9 @@ currency_data = [
         "CPI (Aktuální)": "2.60%", 
         "Inflační očekávání": "1Y: 2.40% | 5Y: 2.10%",
         "10Y Výnos": "4.15% (Gilt)", 
-        "CoT Pozice": 18000, 
-        "CoT Δ WoW": 2000,
-        "CoT Sentiment": "NET LONG"
+        "CoT Pozice": cot_live.get('GBP', {}).get('position', 18000), 
+        "CoT Δ WoW": cot_live.get('GBP', {}).get('delta', 2000),
+        "CoT Sentiment": cot_live.get('GBP', {}).get('sentiment', 'NET LONG')
     },
     {
         "Měna": "🇦🇺 AUD", 
@@ -187,9 +204,9 @@ currency_data = [
         "CPI (Aktuální)": "3.10%", 
         "Inflační očekávání": "1Y: 2.80% | 5Y: 2.40%",
         "10Y Výnos": "4.20%", 
-        "CoT Pozice": -45000, 
-        "CoT Δ WoW": 11000,  # +11k signalizuje pokrývání shortů (Squeeze warning!)
-        "CoT Sentiment": "EXTREME SHORT"
+        "CoT Pozice": cot_live.get('AUD', {}).get('position', -45000), 
+        "CoT Δ WoW": cot_live.get('AUD', {}).get('delta', 11000), 
+        "CoT Sentiment": cot_live.get('AUD', {}).get('sentiment', 'EXTREME SHORT')
     },
     {
         "Měna": "🇯🇵 JAP", 
@@ -198,9 +215,9 @@ currency_data = [
         "CPI (Aktuální)": "2.80%", 
         "Inflační očekávání": "1Y: 2.50% | 5Y: 2.00%",
         "10Y Výnos": "1.10% (JGB)", 
-        "CoT Pozice": -28000, 
-        "CoT Δ WoW": -3000,
-        "CoT Sentiment": "NET SHORT"
+        "CoT Pozice": cot_live.get('JPY', {}).get('position', -28000), 
+        "CoT Δ WoW": cot_live.get('JPY', {}).get('delta', -3000),
+        "CoT Sentiment": cot_live.get('JPY', {}).get('sentiment', 'NET SHORT')
     },
     {
         "Měna": "🇨🇭 CHF", 
@@ -209,15 +226,14 @@ currency_data = [
         "CPI (Aktuální)": "1.10%", 
         "Inflační očekávání": "1Y: 1.00% | 5Y: 1.10%",
         "10Y Výnos": "0.45%", 
-        "CoT Pozice": -15000, 
-        "CoT Δ WoW": -1000,
-        "CoT Sentiment": "NET SHORT"
+        "CoT Pozice": cot_live.get('CHF', {}).get('position', -15000), 
+        "CoT Δ WoW": cot_live.get('CHF', {}).get('delta', -1000),
+        "CoT Sentiment": cot_live.get('CHF', {}).get('sentiment', 'NET SHORT')
     },
 ]
 
 df_forex = pd.DataFrame(currency_data)
 
-# Zobrazení tabulky s formátováním čísel pro CoT
 st.dataframe(
     df_forex, 
     use_container_width=True, 
@@ -253,7 +269,7 @@ st.subheader("📋 Generátor podkladů pro AI Analýzu")
 if st.button("🚀 Vygenerovat komplet podklady pro Chat"):
     payload = f"DATOVÝ REPORT K: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
     payload += "================================================================================\n"
-    payload += "DATOVÉ KARTY MĚN (FOREX):\n"
+    payload += "DATOVÉ KARTY MĚN (FOREX - COT AUTOMATICKÉ):\n"
     for row in currency_data:
         payload += f"• {row['Měna']}: Sazba {row['Základní sazba']} | CPI {row['CPI (Aktuální)']} | 10Y Yield {row['10Y Výnos']} | CoT: {row['CoT Sentiment']} ({row['CoT Pozice']:,} | WoW: {row['CoT Δ WoW']:+,})\n"
     payload += "================================================================================\n"
@@ -265,4 +281,3 @@ if st.button("🚀 Vygenerovat komplet podklady pro Chat"):
     
     st.code(payload, language="text")
     st.success("Kód výše zkopíruj a vlož sem do našeho chatu ke kompletní analýze!")
-    
