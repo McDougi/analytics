@@ -1,7 +1,3 @@
-# ==============================================================================
-# 🚀 STREAMLIT DASHBOARD: FOREX & US INDEXES FULL FUNDAMENTAL ENGINE
-# ==============================================================================
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -9,35 +5,13 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 from fredapi import Fred
 from datetime import datetime, timedelta
+import cot_reports as cot  # <-- Knihovna pro automatické stahování CoT
 
-# --- 1. KONFIGURACE STRÁNKY ---
-st.set_page_config(
-    page_title="Forex & US Indexy | Fundamentální Dashboard",
-    page_icon="📈",
-    layout="wide"
-)
-
-st.title("📈 Fundamental Market Dashboard (Forex & US Indexy)")
-st.caption("Živá tvrdá data: Fed Likvidita, TGA, Bondy, Časová matice měn & CoT Sentiment")
-
-# --- 2. BEZPEČNÉ NAČTENÍ API KLÍČE SE SECRETS ---
-if "FRED_API_KEY" in st.secrets:
-    FRED_API_KEY = st.secrets["FRED_API_KEY"]
-else:
-    FRED_API_KEY = st.sidebar.text_input("Vlož FRED API Klíč:", type="password")
-
-if not FRED_API_KEY:
-    st.warning("⚠️ Pro načtení dat vlož FRED API Klíč v postranním panelu nebo nastavení Secrets na Streamlitu.")
-    st.stop()
-
-# Inicializace klienta FRED
-fred = Fred(api_key=FRED_API_KEY)
-
-# --- 3. DATAFETCHING & CACHING ---
+# --- 3. DATAFETCHING & CACHING S AUTOMATICKÝM COT ---
 six_years_ago_str = (datetime.now() - timedelta(days=365*6)).strftime('%Y-%m-%d')
-one_year_ago_str = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+current_year = datetime.now().year
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=43200) # Caching na 12 hodin (CoT vychází 1x týdně v pátek)
 def fetch_all_data():
     def get_fred(series_id):
         try:
@@ -46,13 +20,15 @@ def fetch_all_data():
         except Exception:
             return None, None
 
-    fed_assets, fed_assets_hist = get_fred('WALCL')       
+    # FRED data
+    fed_assets, fed_assets_hist = get_fred('WALCL')        
     tga_balance, tga_hist = get_fred('WTREGEN')          
-    rrp_balance, rrp_hist = get_fred('RRPONTSYD')        
-    m2_supply, _ = get_fred('WM2NS')                      
-    mich_1y, _ = get_fred('MICH')                         
-    be_5y, _ = get_fred('T5YIE')                          
+    rrp_balance, rrp_hist = get_fred('RRPONTSYD')         
+    m2_supply, _ = get_fred('WM2NS')                     
+    mich_1y, _ = get_fred('MICH')                        
+    be_5y, _ = get_fred('T5YIE')                         
 
+    # Yahoo Finance trhy
     try:
         market_tickers = ['^GSPC', '^IXIC', '^VIX', '^TNX', '^IRX']
         yf_data = yf.download(market_tickers, period='1mo', interval='1d', progress=False)['Close']
@@ -72,6 +48,57 @@ def fetch_all_data():
         us10y_c, us10y_2w = 4.70, 4.57
         us2y_c = 3.80
 
+    # --- AUTOMATICKÉ STAŽENÍ COT REPORTU ---
+    cot_dict = {}
+    try:
+        # Stáhneme "Traders in Financial Futures" (fut) za aktuální rok
+        df_cot = cot.cot_year(year=current_year, cot_report_type='traders_in_financial_futures_fut')
+        
+        # Ošetření názvů sloupců (CFTC mění mezery/velká písmena, sjednotíme na lowercase bez mezer)
+        df_cot.columns = [c.strip().lower().replace(' ', '_') for c in df_cot.columns]
+        
+        # Definice klíčových slov pro jednotlivé měny v CFTC tabulce
+        currency_keywords = {
+            "USD": "us dollar",
+            "EUR": "euro fx",
+            "GBP": "british pound",
+            "AUD": "australian dollar",
+            "JPY": "japanese yen",
+            "CHF": "swiss franc"
+        }
+        
+        for cur, keyword in currency_keywords.items():
+            # Filtrování řádku podle názvu trhu
+            market_row = df_cot[df_cot['market_and_exchange_names'].str.contains(keyword, case=False, na=False)]
+            if not market_row.empty:
+                # Vezmeme nejnovější datum (poslední řádek)
+                latest = market_row.iloc[-1]
+                prev = market_row.iloc[-2] if len(market_row) > 1 else latest
+                
+                # Výpočet čisté pozice (např. Asset Manager Long minus Short, nebo Noncommercial)
+                # U finančních futures se často používá Asset Manager nebo Leveraged Funds. Zde bereme Asset Manager Net.
+                long_col = [c for c in df_cot.columns if 'asset_mgr_positions_long' in c]
+                short_col = [c for c in df_cot.columns if 'asset_mgr_positions_short' in c]
+                
+                if long_col and short_col:
+                    net_pos = int(latest[long_col[0]] - latest[short_col[0]])
+                    prev_net = int(prev[long_col[0]] - prev[short_col[0]])
+                    delta_wow = net_pos - prev_net
+                else:
+                    net_pos, delta_wow = 0, 0
+                
+                sentiment = "NET LONG" if net_pos > 0 else ("NET SHORT" if net_pos < 0 else "NEUTRAL")
+                
+                cot_dict[cur] = {
+                    "position": net_pos,
+                    "delta": delta_wow,
+                    "sentiment": sentiment
+                }
+    except Exception as e:
+        # Fallback pokud stahování selže (např. výpadek CFTC serveru)
+        print(f"Chyba při stahování CoT: {e}")
+        pass
+
     return {
         'fed_assets': fed_assets, 'fed_assets_hist': fed_assets_hist,
         'tga_balance': tga_balance, 'tga_hist': tga_hist,
@@ -80,10 +107,10 @@ def fetch_all_data():
         'sp500_c': sp500_c, 'sp500_2w': sp500_2w,
         'nasdaq_c': nasdaq_c, 'nasdaq_2w': nasdaq_2w,
         'vix_c': vix_c, 'vix_2w': vix_2w,
-        'us10y_c': us10y_c, 'us10y_2w': us10y_2w, 'us2y_c': us2y_c
+        'us10y_c': us10y_c, 'us10y_2w': us10y_2w, 'us2y_c': us2y_c,
+        'cot_data': cot_dict
     }
 
-raw_data = fetch_all_data()
 
 # Přepočty
 fed_assets_b = raw_data['fed_assets'] / 1000 if raw_data['fed_assets'] else 6747.38
