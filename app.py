@@ -207,7 +207,7 @@ currency_data = [
     {
         "Měna": "🇺🇸 USD", 
         "Základní sazba": "3.63%", 
-        "CPI (Aktuální)": "2.40%", 
+        "CPI YoY (Aktuální)": "2.40%", 
         "Inflační očekávání": f"1Y: {raw_data['mich_1y']:.2f}% | 5Y: {raw_data['be_5y']:.2f}%",
         "10Y Výnos": f"{raw_data['us10y_c']:.2f}%", 
         "CoT Pozice": cot_live.get('USD', {}).get('position', 35000), 
@@ -217,7 +217,7 @@ currency_data = [
     {
         "Měna": "🇪🇺 EUR", 
         "Základní sazba": "2.25%", 
-        "CPI (Aktuální)": "2.00%", 
+        "CPI YoY (Aktuální)": "2.00%", 
         "Inflační očekávání": "1Y: 2.10% | 5Y: 1.95%",
         "10Y Výnos": "2.35% (Bund)", 
         "CoT Pozice": cot_live.get('EUR', {}).get('position', -12000), 
@@ -227,7 +227,7 @@ currency_data = [
     {
         "Měna": "🇬🇧 GBP", 
         "Základní sazba": "4.25%", 
-        "CPI (Aktuální)": "2.60%", 
+        "CPI YoY (Aktuální)": "2.60%", 
         "Inflační očekávání": "1Y: 2.40% | 5Y: 2.10%",
         "10Y Výnos": "4.15% (Gilt)", 
         "CoT Pozice": cot_live.get('GBP', {}).get('position', 18000), 
@@ -237,7 +237,7 @@ currency_data = [
     {
         "Měna": "🇦🇺 AUD", 
         "Základní sazba": "4.35%",  
-        "CPI (Aktuální)": "3.10%", 
+        "CPI YoY (Aktuální)": "3.10%", 
         "Inflační očekávání": "1Y: 2.80% | 5Y: 2.40%",
         "10Y Výnos": "4.20%", 
         "CoT Pozice": cot_live.get('AUD', {}).get('position', -45000), 
@@ -247,7 +247,7 @@ currency_data = [
     {
         "Měna": "🇯🇵 JAP", 
         "Základní sazba": "1.00%", 
-        "CPI (Aktuální)": "2.80%", 
+        "CPI YoY (Aktuální)": "2.80%", 
         "Inflační očekávání": "1Y: 2.50% | 5Y: 2.00%",
         "10Y Výnos": "1.10% (JGB)", 
         "CoT Pozice": cot_live.get('JPY', {}).get('position', -28000), 
@@ -257,7 +257,7 @@ currency_data = [
     {
         "Měna": "🇨🇭 CHF", 
         "Základní sazba": "0.00%", 
-        "CPI (Aktuální)": "1.10%", 
+        "CPI YoY (Aktuální)": "1.10%", 
         "Inflační očekávání": "1Y: 1.00% | 5Y: 1.10%",
         "10Y Výnos": "0.45%", 
         "CoT Pozice": cot_live.get('CHF', {}).get('position', -15000), 
