@@ -207,7 +207,6 @@ currency_data = [
     {
         "Měna": "🇺🇸 USD", 
         "Základní sazba": "3.63%", 
-        "Sazba výhled": "3.50% (-25 bps cut)", 
         "CPI (Aktuální)": "2.40%", 
         "Inflační očekávání": f"1Y: {raw_data['mich_1y']:.2f}% | 5Y: {raw_data['be_5y']:.2f}%",
         "10Y Výnos": f"{raw_data['us10y_c']:.2f}%", 
@@ -218,7 +217,6 @@ currency_data = [
     {
         "Měna": "🇪🇺 EUR", 
         "Základní sazba": "2.25%", 
-        "Sazba výhled": "2.25% (Pauza)", 
         "CPI (Aktuální)": "2.00%", 
         "Inflační očekávání": "1Y: 2.10% | 5Y: 1.95%",
         "10Y Výnos": "2.35% (Bund)", 
@@ -229,7 +227,6 @@ currency_data = [
     {
         "Měna": "🇬🇧 GBP", 
         "Základní sazba": "4.25%", 
-        "Sazba výhled": "4.00% (Možný cut)", 
         "CPI (Aktuální)": "2.60%", 
         "Inflační očekávání": "1Y: 2.40% | 5Y: 2.10%",
         "10Y Výnos": "4.15% (Gilt)", 
@@ -239,8 +236,7 @@ currency_data = [
     },
     {
         "Měna": "🇦🇺 AUD", 
-        "Základní sazba": "4.35%", 
-        "Sazba výhled": "4.35% (Beze změny)", 
+        "Základní sazba": "4.35%",  
         "CPI (Aktuální)": "3.10%", 
         "Inflační očekávání": "1Y: 2.80% | 5Y: 2.40%",
         "10Y Výnos": "4.20%", 
@@ -251,7 +247,6 @@ currency_data = [
     {
         "Měna": "🇯🇵 JAP", 
         "Základní sazba": "1.00%", 
-        "Sazba výhled": "1.00% - 1.25% (Hike možný)", 
         "CPI (Aktuální)": "2.80%", 
         "Inflační očekávání": "1Y: 2.50% | 5Y: 2.00%",
         "10Y Výnos": "1.10% (JGB)", 
@@ -262,7 +257,6 @@ currency_data = [
     {
         "Měna": "🇨🇭 CHF", 
         "Základní sazba": "0.00%", 
-        "Sazba výhled": "0.00% (Držení na nule)", 
         "CPI (Aktuální)": "1.10%", 
         "Inflační očekávání": "1Y: 1.00% | 5Y: 1.10%",
         "10Y Výnos": "0.45%", 
